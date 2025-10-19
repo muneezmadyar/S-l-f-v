@@ -1,5 +1,6 @@
 import bcryptjs from "bcryptjs";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 
 import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie.js";
 import {
@@ -196,4 +197,48 @@ export const checkAuth = async (req, res) => {
 		console.log("Error in checkAuth ", error);
 		res.status(400).json({ success: false, message: error.message });
 	}
+};
+
+
+
+export const adminLogin = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    if (
+      email !== process.env.ADMIN_EMAIL ||
+      password !== process.env.ADMIN_PASSWORD
+    ) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid admin credentials",
+      });
+    }
+
+    // Generate token
+   const token = jwt.sign({ email, role: "admin" }, process.env.JWT_SECRET, {
+  expiresIn: "1h",
+});
+
+res.cookie("admin_token", token, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "strict",
+  maxAge: 3600000,
+});
+
+return res.status(200).json({
+  success: true,
+  message: "Admin logged in successfully",
+  token, // ✅ Add this
+  admin: { email },
+});
+
+  } catch (error) {
+    console.error("Error in adminLogin:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
 };
